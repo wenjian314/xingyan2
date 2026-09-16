@@ -1,0 +1,13 @@
+[project]
+name = "xingyan"
+version = "1.0.0"
+description = "星言 - 摩斯密码翻译器 (Morse Code Translator with custom '迷语' alphabet)"
+requires-python = ">=3.8"
+dependencies = [
+    "kivy>=2.2.0",
+    "pypinyin>=0.50.0",
+    "openpyxl>=3.1.0",
+]
+
+[project.scripts]
+xingyan = "main:main"
