@@ -25,7 +25,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          git zip unzip openjdk-17-jdk \
+          git zip unzip openjdk-8-jdk \
           autoconf libtool pkg-config \
           zlib1g-dev libncurses5-dev \
           libssl-dev libffi-dev \
@@ -88,8 +88,11 @@ jobs:
     
     - name: Build APK (debug)
       run: |
-        buildozer android debug
-
+          export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+          export P4A_PYTHON_VERSION=3.10
+          buildozer android clean
+          buildozer android debug
+          
     - name: Find and rename APK
       run: |
         find . -name "*.apk" -not -path "*/.buildozer/*" 2>/dev/null || true
