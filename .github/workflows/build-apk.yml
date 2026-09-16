@@ -90,7 +90,6 @@ jobs:
       run: |
           export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
           export P4A_PYTHON_VERSION=3.10
-          buildozer android clean
           buildozer android debug
           
     - name: Find and rename APK
