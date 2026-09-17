@@ -19,7 +19,7 @@ version = 1.0.0
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3==3.10,kivy==2.3.1,pypinyin==0.53.0,openpyxl==3.1.5
+requirements = python3==3.10.12,hostpython3==3.10.12,kivy==2.3.1,pypinyin==0.53.0,openpyxl==3.1.5
 
 # (str) Supported orientation (one of landscape, sensorLandscape, portrait or all)
 orientation = portrait
