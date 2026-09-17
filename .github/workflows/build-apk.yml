@@ -1,4 +1,4 @@
-name: Build APK (Stable)
+name: Build APK
 
 on:
   push:
@@ -7,34 +7,36 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04  # ✅ 用 22.04 更稳，24.04 有些路径变化
     steps:
       - uses: actions/checkout@v4
 
-      - name: Remove GHA bundled NDK (防干扰)
+      - name: Remove GHA bundled NDK (防污染)
         run: |
-          sudo rm -rf /usr/local/lib/android/sdk/ndk/27.3.13750724
-          sudo rm -rf /usr/local/lib/android/sdk/ndk/29.0.14206865
+          sudo rm -rf /usr/local/lib/android/sdk/ndk/*
+          sudo rm -rf /usr/local/lib/android/sdk/cmake/*
 
-      - name: Setup Python 3.11
+      - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.10"
 
       - name: Install system deps
         run: |
-          sudo apt update
-          sudo apt install -y openjdk-17-jdk git zip unzip autoconf libtool \
-            pkg-config zlib1g-dev libncurses5-dev cmake libffi-dev libssl-dev \
-            automake autopoint gettext python3-pip
+          sudo apt-get update
+          sudo apt-get install -y \
+            git zip unzip autoconf automake libtool pkg-config \
+            libffi-dev libssl-dev zlib1g-dev libbz2-dev libreadline-dev \
+            libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \
+            xz-utils tk-dev openjdk-17-jdk
           echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
 
-      - name: Install Buildozer & Cython
+      - name: Install Buildozer (不装 p4a！)
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install cython==3.0.11
-          pip install buildozer==1.5.0
-          pip install python-for-android==2024.01.21  # ✅ 锁定稳定版 p4a
+          pip install cython==0.29.37  # ✅ Kivy 2.3.1 适配的 Cython
+          pip install buildozer
+          # ❌ 不装 python-for-android，让 buildozer 自己拉
 
       - name: Setup sdkmanager (旧路径兼容)
         run: |
@@ -54,18 +56,17 @@ jobs:
           "$SDK_DIR/cmdline-tools/latest/bin/sdkmanager" \
             "platform-tools" "platforms;android-28" "build-tools;28.0.3"
 
-      - name: Force clean all
+      - name: Clean (仅首次前清理，不删 p4a 目录)
         run: |
           rm -rf .buildozer
-          rm -rf ~/.buildozer/android/platform/build-*
-          buildozer android clean || true
+          # ❌ 不再 rm -rf ~/.buildozer/.../build-*
+          # ❌ 不再 buildozer android clean（首次会误杀）
 
       - name: Build APK (debug)
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
           export PATH=$JAVA_HOME/bin:$PATH
-          export P4A_PYTHON_VERSION=3.11
-          export P4A_BRANCH=stable  # ✅ 双重保险
+          export P4A_PYTHON_VERSION=3.10
           export CFLAGS="-isystem /usr/include/x86_64-linux-gnu -isystem /usr/include"
           export CXXFLAGS="-isystem /usr/include/x86_64-linux-gnu -isystem /usr/include"
           buildozer -v android debug
