@@ -35,27 +35,26 @@ jobs:
           pip install --upgrade pip
           pip install "buildozer[full]" cython==0.29.36
 
-    - name: Cache Buildozer downloads
-      uses: actions/cache@v4
-      with:
-        path: |
-          .buildozer/android/platform
-          .buildozer/android/packages
-        key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
-        restore-keys: |
-          ${{ runner.os }}-buildozer-
+    # ── 临时禁用缓存，强制全量重编（出包后可恢复）──
+    # - name: Cache Buildozer downloads
+    #   uses: actions/cache@v4
+    #   with:
+    #     path: |
+    #       .buildozer/android/platform
+    #       .buildozer/android/packages
+    #     key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+    #     restore-keys: |
+    #       ${{ runner.os }}-buildozer-
 
     - name: Accept Android SDK licenses
       run: |
         mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
         echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-        # 补充另外两个 license，避免 6 of 7 not accepted
         echo "d56f5187479451eabf01fb78af6dfcb131a6481e" > ~/.buildozer/android/platform/android-sdk/licenses/android-googletv-license
         echo "db158d2a12828de8a35f07cdd5a8a7a8e3d4c9a0" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-preview-license
 
     - name: Prepare icon
       run: |
-        # 确保图标存在
         if [ ! -f "icon.png" ]; then
           python adaptive_icon.py
         fi
@@ -65,7 +64,6 @@ jobs:
       run: |
           SDK_DIR="/home/runner/.buildozer/android/platform/android-sdk"
           mkdir -p $SDK_DIR/cmdline-tools
-          # 下载并解压新版 cmdline-tools (若未存在)
           if [ ! -f $SDK_DIR/cmdline-tools/latest/bin/sdkmanager ]; then
             curl -L -o cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
             unzip -q cmdline-tools.zip -d $SDK_DIR/cmdline-tools/
@@ -73,13 +71,17 @@ jobs:
             mv $SDK_DIR/cmdline-tools/cmdline-tools/* $SDK_DIR/cmdline-tools/latest/ 2>/dev/null || true
             rm -rf $SDK_DIR/cmdline-tools/cmdline-tools
           fi
-          # 创建旧路径软链接，兼容 Buildozer 查找逻辑
           mkdir -p $SDK_DIR/tools/bin
           ln -sf $SDK_DIR/cmdline-tools/latest/bin/sdkmanager $SDK_DIR/tools/bin/sdkmanager
           ln -sf $SDK_DIR/cmdline-tools/latest/bin/avdmanager $SDK_DIR/tools/bin/avdmanager
-          # 接受协议并安装基础工具（去掉 || true，让真实错误暴露）
           yes | $SDK_DIR/cmdline-tools/latest/bin/sdkmanager --licenses
           $SDK_DIR/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-28" "build-tools;28.0.3"
+
+    - name: Clean Buildozer (Force full rebuild)
+      run: |
+          rm -rf .buildozer/android/packages
+          rm -rf .buildozer/android/platform/build-arm64-v8a
+          buildozer android clean || true
 
     - name: Build APK (debug)
       run: |
@@ -87,19 +89,14 @@ jobs:
           export PATH=$JAVA_HOME/bin:$PATH
           export P4A_PYTHON_VERSION=3.9
           export P4A_BRANCH=master
-          # 关键：禁止宿主机头文件污染交叉编译（根治 cdefs.h __GNUC_PREREQ 报错）
           export CFLAGS="-isystem /usr/include/x86_64-linux-gnu -isystem /usr/include"
           export CXXFLAGS="-isystem /usr/include/x86_64-linux-gnu -isystem /usr/include"
-          # 强制重编（本次必须，出包后可删）
-          buildozer android clean || true
-          # 正式构建，加 -v 输出详细日志便于排查
           buildozer -v android debug
 
     - name: Find and rename APK
       run: |
           find . -name "*.apk" -not -path "*/.buildozer/*" 2>/dev/null || true
           find .buildozer -name "*.apk" 2>/dev/null || true
-          # 复制到已知位置
           cp bin/*.apk "星言_v1.0.0.apk" 2>/dev/null || cp .buildozer/bin/*.apk "星言_v1.0.0.apk" 2>/dev/null || true
           ls -la 星言_v1.0.0.apk 2>/dev/null || echo "APK not found in expected locations"
 
