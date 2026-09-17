@@ -62,7 +62,7 @@ android.logcat_filters = *:S python:D
 android.copy_libs = 1
 
 # (str) The Android arch to build for (one of armeabi-v7a, arm64-v8a, x86, x86_64)
-android.archs = arm64-v8a,armeabi-v7a
+android.archs = arm64-v8a
 
 # (bool) Optimize Python bytecode before packaging (default False)
 android.optimize_python = True
