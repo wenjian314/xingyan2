@@ -43,13 +43,14 @@ fullscreen = 0
 android.permissions = READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
 
 # (int) Target Android API level (for android)
-android.api = 31
+android.api = 28
 
 # (int) Minimum API level (for android)
 android.minapi = 21
 
 # (str) Android NDK version to use
 android.ndk = 25b
+android.ndk_api = 21
 
 # (bool) Use --private data storage (True) or --dir (False)
 android.private_storage = True
@@ -69,6 +70,7 @@ android.optimize_python = True
 [buildozer]
 # (int) Log level (0 = error only, 1 = info, 2 = debug, 3 = verbose)
 log_level = 2
+p4a.branch = master
 
 # (str) Path to build artifacts
 build_dir = .buildozer
