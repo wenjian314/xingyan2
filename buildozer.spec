@@ -21,7 +21,9 @@ android.logcat_filters = *:S python:D
 android.copy_libs = 1
 android.archs = arm64-v8a
 android.optimize_python = True
-android.bootstrap = sdl2
+
+# ⭐ 用 p4a.bootstrap（新写法，不报 deprecated 警告）
+p4a.bootstrap = sdl2
 
 [buildozer]
 log_level = 2
