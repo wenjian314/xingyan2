@@ -18,7 +18,6 @@ source.include_exts = py,png,jpg,kv,json,xlsx,md
 version = 1.0.0
 
 # (list) Application requirements
-# comma separated e.g. requirements = sqlite3,kivy
 requirements = python3==3.9,hostpython3==3.9,kivy==2.3.1,pypinyin==0.53.0,openpyxl==3.1.5
 
 # (str) Supported orientation (one of landscape, sensorLandscape, portrait or all)
@@ -66,6 +65,9 @@ android.archs = arm64-v8a
 
 # (bool) Optimize Python bytecode before packaging (default False)
 android.optimize_python = True
+
+# ⭐ 关键修复：显式锁定 bootstrap，防止 p4a master 分支误解析为 sd12
+android.bootstrap = sdl2
 
 [buildozer]
 # (int) Log level (0 = error only, 1 = info, 2 = debug, 3 = verbose)
