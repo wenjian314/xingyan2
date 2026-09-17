@@ -91,7 +91,7 @@ jobs:
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
           export PATH=$JAVA_HOME/bin:$PATH
           export P4A_PYTHON_VERSION=3.10
-          # 清理旧分发残留（关键！防 3.14 缓存）
+          # 清理旧分发残留（关键防3.14缓存）
           buildozer android clean_dist
           buildozer android debug
 
