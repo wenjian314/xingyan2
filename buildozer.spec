@@ -18,7 +18,8 @@ source.include_exts = py,png,jpg,kv,json,xlsx,md
 version = 1.0.0
 
 # (list) Application requirements
-requirements = python3==3.9,hostpython3==3.9,kivy==2.3.1,pypinyin==0.53.0,openpyxl==3.1.5
+# ⭐ 不写 hostpython3==x.x，让它自动跟 python3 版本走
+requirements = python3==3.9,kivy==2.3.1,pypinyin==0.53.0,openpyxl==3.1.5
 
 # (str) Supported orientation (one of landscape, sensorLandscape, portrait or all)
 orientation = portrait
@@ -66,13 +67,15 @@ android.archs = arm64-v8a
 # (bool) Optimize Python bytecode before packaging (default False)
 android.optimize_python = True
 
-# ⭐ 关键修复：显式锁定 bootstrap，防止 p4a master 分支误解析为 sd12
+# ⭐ 显式锁定 bootstrap
 android.bootstrap = sdl2
 
 [buildozer]
 # (int) Log level (0 = error only, 1 = info, 2 = debug, 3 = verbose)
 log_level = 2
-p4a.branch = master
+
+# ⭐ 用 stable 分支，不用 master（master 对 3.9+NDK25b 组合有 404 问题）
+p4a.branch = stable
 
 # (str) Path to build artifacts
 build_dir = .buildozer
