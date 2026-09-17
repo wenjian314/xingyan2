@@ -35,17 +35,6 @@ jobs:
           pip install --upgrade pip
           pip install "buildozer[full]" cython==0.29.36
 
-    # ── 临时禁用缓存，强制全量重编（出包后可恢复）──
-    # - name: Cache Buildozer downloads
-    #   uses: actions/cache@v4
-    #   with:
-    #     path: |
-    #       .buildozer/android/platform
-    #       .buildozer/android/packages
-    #     key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
-    #     restore-keys: |
-    #       ${{ runner.os }}-buildozer-
-
     - name: Accept Android SDK licenses
       run: |
         mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
@@ -77,10 +66,9 @@ jobs:
           yes | $SDK_DIR/cmdline-tools/latest/bin/sdkmanager --licenses
           $SDK_DIR/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-28" "build-tools;28.0.3"
 
-    - name: Clean Buildozer (Force full rebuild)
+    - name: Clean Buildozer (force full rebuild)
       run: |
-          rm -rf .buildozer/android/packages
-          rm -rf .buildozer/android/platform/build-arm64-v8a
+          rm -rf .buildozer
           buildozer android clean || true
 
     - name: Build APK (debug)
@@ -88,7 +76,6 @@ jobs:
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
           export PATH=$JAVA_HOME/bin:$PATH
           export P4A_PYTHON_VERSION=3.9
-          export P4A_BRANCH=master
           export CFLAGS="-isystem /usr/include/x86_64-linux-gnu -isystem /usr/include"
           export CXXFLAGS="-isystem /usr/include/x86_64-linux-gnu -isystem /usr/include"
           buildozer -v android debug
