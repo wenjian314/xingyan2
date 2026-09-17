@@ -19,7 +19,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: "3.10"
+        python-version: "3.9"
 
     - name: Install system dependencies
       run: |
@@ -86,10 +86,14 @@ jobs:
       run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
           export PATH=$JAVA_HOME/bin:$PATH
-          export P4A_PYTHON_VERSION=3.10
+          # 下面这两行就是第2步要加的环境变量（顺便把版本改为3.9）
+          export P4A_PYTHON_VERSION=3.9
           export P4A_BRANCH=master
+          # 第3步：清理旧缓存，强制重编（本次必须，下次可删）
+          buildozer android clean || true
+          # 正式构建
           buildozer android debug
-
+          
     - name: Find and rename APK
       run: |
           find . -name "*.apk" -not -path "*/.buildozer/*" 2>/dev/null || true
