@@ -1,113 +1,81 @@
-name: Build APK
+name: Build APK (Stable)
 
 on:
   push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-
+    runs-on: ubuntu-24.04
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.11"
+      - name: Remove GHA bundled NDK (防干扰)
+        run: |
+          sudo rm -rf /usr/local/lib/android/sdk/ndk/27.3.13750724
+          sudo rm -rf /usr/local/lib/android/sdk/ndk/29.0.14206865
 
-    - name: Remove GHA bundled NDK (prevents version conflict)
-      run: |
-        sudo rm -rf /usr/local/lib/android/sdk/ndk
-        sudo rm -rf /usr/local/lib/android/sdk/ndk-bundle
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          git zip unzip openjdk-17-jdk \
-          autoconf automake libtool libltdl-dev \
-          libffi-dev zlib1g-dev libssl-dev wget \
-          python3-setuptools python3-pip python3-venv
+      - name: Install system deps
+        run: |
+          sudo apt update
+          sudo apt install -y openjdk-17-jdk git zip unzip autoconf libtool \
+            pkg-config zlib1g-dev libncurses5-dev cmake libffi-dev libssl-dev \
+            automake autopoint gettext python3-pip
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
 
-    - name: Install Buildozer
-      run: |
-        pip install --upgrade pip
-        pip install "buildozer[full]" cython==0.29.36
+      - name: Install Buildozer & Cython
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install cython==3.0.11
+          pip install buildozer==1.5.0
+          pip install python-for-android==2024.01.21  # ✅ 锁定稳定版 p4a
 
-    - name: Accept Android SDK licenses (pre-seed)
-      run: |
-        mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
-        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-        echo "db158d2a12828de8a35f07cdd5a8a7a8e3d4c9a0" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+      - name: Setup sdkmanager (旧路径兼容)
+        run: |
+          SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
+          mkdir -p "$SDK_DIR/cmdline-tools"
+          if [ ! -f "$SDK_DIR/cmdline-tools/latest/bin/sdkmanager" ]; then
+            curl -L -o cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+            unzip -q cmdline-tools.zip -d "$SDK_DIR/cmdline-tools/"
+            mkdir -p "$SDK_DIR/cmdline-tools/latest"
+            mv "$SDK_DIR/cmdline-tools/cmdline-tools/"* "$SDK_DIR/cmdline-tools/latest/" 2>/dev/null || true
+            rm -rf "$SDK_DIR/cmdline-tools/cmdline-tools"
+          fi
+          mkdir -p "$SDK_DIR/tools/bin"
+          ln -sf "$SDK_DIR/cmdline-tools/latest/bin/sdkmanager" "$SDK_DIR/tools/bin/sdkmanager"
+          ln -sf "$SDK_DIR/cmdline-tools/latest/bin/avdmanager" "$SDK_DIR/tools/bin/avdmanager"
+          yes | "$SDK_DIR/cmdline-tools/latest/bin/sdkmanager" --licenses
+          "$SDK_DIR/cmdline-tools/latest/bin/sdkmanager" \
+            "platform-tools" "platforms;android-28" "build-tools;28.0.3"
 
-    - name: Setup Android SDK + sdkmanager (new layout → legacy path)
-      run: |
-        SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
-        mkdir -p "$SDK_DIR/cmdline-tools"
+      - name: Force clean all
+        run: |
+          rm -rf .buildozer
+          rm -rf ~/.buildozer/android/platform/build-*
+          buildozer android clean || true
 
-        # 下载新版 command-line tools（如果不存在）
-        if [ ! -f "$SDK_DIR/cmdline-tools/latest/bin/sdkmanager" ]; then
-          echo "Downloading command-line tools..."
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
-          unzip -q cmdline-tools.zip -d "$SDK_DIR/cmdline-tools/"
-          mkdir -p "$SDK_DIR/cmdline-tools/latest"
-          mv "$SDK_DIR/cmdline-tools/cmdline-tools/"* "$SDK_DIR/cmdline-tools/latest/" 2>/dev/null || true
-          rm -rf "$SDK_DIR/cmdline-tools/cmdline-tools"
-          rm -f cmdline-tools.zip
-        fi
+      - name: Build APK (debug)
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export PATH=$JAVA_HOME/bin:$PATH
+          export P4A_PYTHON_VERSION=3.11
+          export P4A_BRANCH=stable  # ✅ 双重保险
+          export CFLAGS="-isystem /usr/include/x86_64-linux-gnu -isystem /usr/include"
+          export CXXFLAGS="-isystem /usr/include/x86_64-linux-gnu -isystem /usr/include"
+          buildozer -v android debug
 
-        # 创建旧路径软链接（Buildozer 依赖这个）
-        mkdir -p "$SDK_DIR/tools/bin"
-        ln -sf "$SDK_DIR/cmdline-tools/latest/bin/sdkmanager" "$SDK_DIR/tools/bin/sdkmanager"
-        ln -sf "$SDK_DIR/cmdline-tools/latest/bin/avdmanager" "$SDK_DIR/tools/bin/avdmanager"
-
-        # 接受所有 licenses
-        yes | "$SDK_DIR/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
-
-        # 安装必要组件
-        "$SDK_DIR/cmdline-tools/latest/bin/sdkmanager" \
-          "platform-tools" \
-          "platforms;android-28" \
-          "build-tools;28.0.3"
-
-        echo "SDK setup complete."
-        ls -la "$SDK_DIR/tools/bin/sdkmanager"
-
-    - name: Prepare icon
-      run: |
-        if [ ! -f "icon.png" ]; then
-          python adaptive_icon.py
-        fi
-        ls -la icon.png
-
-    - name: Force clean all Buildozer artifacts
-      run: |
-        rm -rf .buildozer
-        rm -rf ~/.buildozer/android/platform/build-*
-        buildozer android clean || true
-
-    - name: Build APK (debug)
-      run: |
-        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-        export PATH=$JAVA_HOME/bin:$PATH
-        export P4A_PYTHON_VERSION=3.11
-        export CFLAGS="-isystem /usr/include/x86_64-linux-gnu -isystem /usr/include"
-        export CXXFLAGS="-isystem /usr/include/x86_64-linux-gnu -isystem /usr/include"
-        buildozer -v android debug
-
-    - name: Upload APK artifact
-      if: success()
-      uses: actions/upload-artifact@v4
-      with:
-        name: 星言-APK
-        path: |
-          bin/*.apk
-          .buildozer/bin/*.apk
-        if-no-files-found: warn
+      - name: Upload APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 星言-APK
+          path: |
+            bin/*.apk
+            .buildozer/bin/*.apk
+          if-no-files-found: warn
